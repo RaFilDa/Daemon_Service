@@ -34,13 +34,13 @@ namespace RaFilDaBackupService
             string typeBackup = "";
             switch (num)
             {
-                case 0:
+                case 1:
                     typeBackup = "FULL";
                     break;
-                case 1:
+                case 2:
                     typeBackup = "DIFF";
                     break;
-                case 2:
+                case 3:
                     typeBackup = "INC";
                     break;
             }
