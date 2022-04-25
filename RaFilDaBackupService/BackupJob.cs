@@ -8,6 +8,7 @@ using RaFilDaBackupService.Entities;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text;
+using System.Threading;
 
 namespace RaFilDaBackupService
 {
@@ -23,7 +24,26 @@ namespace RaFilDaBackupService
             var bt = new BackupTools();
             var t = new GenericHttpTools<Log>();
             var t2 = new HttpTools();
-            oldLogs = new List<Log>(t.LoadFile(@"..\log.json"));
+            try
+            {
+                oldLogs = new List<Log>(t.LoadFile(@"..\log.json"));
+            }
+            catch
+            {
+                bool repeat = true;
+                while (repeat)
+                {
+                    try
+                    {
+                        oldLogs = new List<Log>(t.LoadFile(@"..\log.json"));
+                        repeat = false;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(1000);
+                    }
+                }
+            }
             var log = new Log();
             string state = "";
 
@@ -52,16 +72,33 @@ namespace RaFilDaBackupService
             try
             {
                 var httpClient = new HttpClient(handler);
-                
-                foreach(Log l in oldLogs)
+
+                HttpResponseMessage response = httpClient.GetAsync(Program.API_URL + "Computers/GetComputersByID/1").Result;
+
+                foreach (Log l in oldLogs)
                 {
                     var newLog = new StringContent(JsonSerializer.Serialize(l), Encoding.UTF8, "application/json");
                     httpClient.PostAsync(Program.API_URL + "Reports", newLog);
                 }
+
+                List<Log> emptyLogs = new List<Log>();
+                t.UpdateFile(emptyLogs, @"..\log.json");
             }
             catch
             {
-                t.UpdateFile(oldLogs, @"..\log.json");
+                bool repeat = true;
+                while(repeat)
+                {
+                    try
+                    {
+                        t.UpdateFile(oldLogs, @"..\log.json");
+                        repeat = false;
+                    }
+                    catch
+                    {
+                        Thread.Sleep(1000);
+                    }
+                }
             }
 
             return Task.CompletedTask;

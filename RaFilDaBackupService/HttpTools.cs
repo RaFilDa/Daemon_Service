@@ -18,16 +18,62 @@ namespace RaFilDaBackupService
 
         public int GetCompConfigID(int confId)
         {
+            try
+            {
+                var httpClient = new HttpClient(handler);
+                string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
+                HttpResponseMessage response = httpClient.GetAsync(URL).Result;
+                Task<string> idData;
+                using (HttpContent content = response.Content)
+                {
+                    idData = content.ReadAsStringAsync();
+                }
+                var configData = JsonSerializer.Deserialize<List<CompConf>>(idData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                var t = new GenericHttpTools<CompConf>();
+                t.UpdateFile(configData, @"..\CompConf.json");
+                return configData[0].Id;
+            }
+            catch
+            {
+                var t1 = new GenericHttpTools<CompConf>();
+                List<CompConf> compConfs = new List<CompConf>(t1.LoadFile(@"..\CompConf.json"));
+                var t2 = new GenericHttpTools<ConfigInfo>();
+                List<ConfigInfo> configs = new List<ConfigInfo>(t2.LoadFile(@"..\configs.json"));
+
+                int id = 0;
+                foreach (var compConf in compConfs)
+                {
+                    foreach (var config in configs)
+                    {
+                        if(compConf.ConfigID == config.Config.Id)
+                        {
+                            id = compConf.Id;
+                        }
+                    }
+                }
+                return id;
+            }
+        }
+
+        public void GetAuth()
+        {
             var httpClient = new HttpClient(handler);
-            string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
-            HttpResponseMessage response = httpClient.GetAsync(URL).Result;
-            Task<string> idData;
+            var AuthLogin = new AuthLogin();
+            AuthLogin.login = "admin";
+            AuthLogin.password = "admin";
+
+            var AuthJsonLogin = JsonSerializer.Serialize(AuthLogin, new JsonSerializerOptions { WriteIndented = true });
+
+            HttpResponseMessage response = httpClient.GetAsync(Program.API_URL + "api/Sessions").Result;
+            Task<string> data;
             using (HttpContent content = response.Content)
             {
-                idData = content.ReadAsStringAsync();
+                data = content.ReadAsStringAsync();
             }
-            var configData = JsonSerializer.Deserialize<List<Computer>>(idData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            return configData[0].Id;
+
+            //data teď získají autentifikační token
+
+            //TODO: přidat logiku na ověření tokenu na API
         }
 
         public int GetID()
@@ -101,13 +147,13 @@ namespace RaFilDaBackupService
                         inputData = content.ReadAsStringAsync();
                     }
 
-                    result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                    result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
 
                     t.UpdateFile(result, @"..\configs.json");
                 }
                 catch
                 {
-                    result = new List<ConfigInfo>(t.LoadFile(@"..\configs.json"));
+                    result = t.LoadFile(@"..\configs.json");
                 }
 
                 if (result.Count == 0)

@@ -26,21 +26,14 @@ namespace RaFilDaBackupService
                     {
                         q.UseMicrosoftDependencyInjectionScopedJobFactory();
 
-                        var JobKey = new JobKey("StartScheduler");
-                        q.AddJob<ScheduleJob>(opts => opts.WithIdentity(JobKey));
-                        q.AddTrigger(opts => opts
-                            .ForJob(JobKey)
-                            .WithIdentity("t_StartScheduler")
-                            .WithSimpleSchedule(x => x
-                                .WithIntervalInSeconds(1)
-                                .WithRepeatCount(1)));
-
-                        JobKey = new JobKey("Sheduler");
+                        var JobKey = new JobKey("Sheduler");
                         q.AddJob<ScheduleJob>(opts => opts.WithIdentity(JobKey));
                         q.AddTrigger(opts => opts
                             .ForJob(JobKey)
                             .WithIdentity("t_Sheduler")
-                            .WithCronSchedule("0 0 * * * ?"));
+                            .WithSimpleSchedule(x => x
+                                .WithIntervalInSeconds(3600)
+                                .RepeatForever()));
                     });
                     services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
                 });
