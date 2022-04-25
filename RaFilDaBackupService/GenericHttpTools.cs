@@ -25,12 +25,12 @@ namespace RaFilDaBackupService
             sr.Close();
 
             if(data != "")
-                dataInFile = JsonSerializer.Deserialize<List<T>>(data, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                dataInFile = JsonSerializer.Deserialize<List<T>>(data, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
 
             return dataInFile;
         }
 
-        public void UpdateFile(List<T> allConfigs, string path)
+        public void UpdateFile(List<T> data, string path)
         {
             if (!File.Exists(path))
             {
@@ -40,7 +40,7 @@ namespace RaFilDaBackupService
 
             string jsonConfigs = "";
 
-            jsonConfigs += JsonSerializer.Serialize(allConfigs, new JsonSerializerOptions { WriteIndented = true });
+            jsonConfigs += JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
 
             StreamWriter sw = new StreamWriter(path);
             sw.WriteLine(jsonConfigs);
