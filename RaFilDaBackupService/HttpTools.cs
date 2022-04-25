@@ -19,7 +19,7 @@ namespace RaFilDaBackupService
         public int GetCompConfigID(int confId)
         {
             var httpClient = new HttpClient(handler);
-            string URL = "https://localhost:5001/Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
+            string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
             HttpResponseMessage response = httpClient.GetAsync(URL).Result;
             Task<string> idData;
             using (HttpContent content = response.Content)
@@ -38,7 +38,7 @@ namespace RaFilDaBackupService
                 .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                 .Select(nic => nic.GetPhysicalAddress().ToString())
                 .FirstOrDefault();
-            string URL = "https://localhost:5001/Computers/GetComputersByMAC/" + MAC;
+            string URL = Program.API_URL + "Computers/GetComputersByMAC/" + MAC;
             HttpResponseMessage response = httpClient.GetAsync(URL).Result;
             Task<string> userData;
             using (HttpContent content = response.Content)
@@ -49,7 +49,7 @@ namespace RaFilDaBackupService
             if (userData.Result == "[]")
             {
                 var newComputer = new StringContent(JsonSerializer.Serialize(CreateComputerInfo()), Encoding.UTF8, "application/json");
-                httpClient.PostAsync("https://localhost:5001/Computers", newComputer);
+                httpClient.PostAsync(Program.API_URL + "Computers", newComputer);
 
                 HttpResponseMessage newResponse = httpClient.GetAsync(URL).Result;
                 using (HttpContent content = newResponse.Content)
@@ -93,7 +93,7 @@ namespace RaFilDaBackupService
 
                     var httpClient = new HttpClient(handler);
 
-                    string URL = "https://localhost:5001/Daemon/" + ID;
+                    string URL = Program.API_URL + "Daemon/" + ID;
 
                     HttpResponseMessage response = httpClient.GetAsync(URL).Result;
                     using (HttpContent content = response.Content)

@@ -14,17 +14,9 @@ namespace RaFilDaBackupService
     public class BackupJob : IJob
     {
         public HttpClientHandler handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator };
-        private readonly ILogger<BackupJob> _logger;
-        public BackupJob(ILogger<BackupJob> logger)
-        {
-            _logger = logger;
-        }
-
         public Task Execute(IJobExecutionContext context)
         {
             JobDataMap dataMap = context.JobDetail.JobDataMap;
-
-            _logger.LogInformation("Backup: " + dataMap.GetString("jobName") + " STARTED");
 
             List<Log> oldLogs = new List<Log>();
 
@@ -55,8 +47,6 @@ namespace RaFilDaBackupService
             log.Type = bt.GetType(dataMap.GetInt("jobType"));
             log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestination");
 
-            _logger.LogInformation("Backup: " + dataMap.GetString("jobName") + " " + state);
-
             oldLogs.Add(log);
 
             try
@@ -66,7 +56,7 @@ namespace RaFilDaBackupService
                 foreach(Log l in oldLogs)
                 {
                     var newLog = new StringContent(JsonSerializer.Serialize(l), Encoding.UTF8, "application/json");
-                    httpClient.PostAsync("https://localhost:5001/Reports", newLog);
+                    httpClient.PostAsync(Program.API_URL + "Reports", newLog);
                 }
             }
             catch
