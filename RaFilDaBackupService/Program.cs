@@ -12,9 +12,12 @@ namespace RaFilDaBackupService
     {
         public static IScheduler _sheduler = null;
         public static string API_URL = "https://localhost:5001/";
+        public static int ID { get; set; }
 
         public static void Main(string[] args)
         {
+            var t = new HttpTools();
+            ID = t.GetID();
             CreateHostBuilder(args).Build().Run();
         }
         

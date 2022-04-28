@@ -21,7 +21,7 @@ namespace RaFilDaBackupService
             try
             {
                 var httpClient = new HttpClient(handler);
-                string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
+                string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + Program.ID;
                 HttpResponseMessage response = httpClient.GetAsync(URL).Result;
                 Task<string> idData;
                 using (HttpContent content = response.Content)
@@ -135,11 +135,9 @@ namespace RaFilDaBackupService
             {
                 try
                 {
-                    int ID = GetID();
-
                     var httpClient = new HttpClient(handler);
 
-                    string URL = Program.API_URL + "Daemon/" + ID;
+                    string URL = Program.API_URL + "Daemon/" + Program.ID;
 
                     HttpResponseMessage response = httpClient.GetAsync(URL).Result;
                     using (HttpContent content = response.Content)
