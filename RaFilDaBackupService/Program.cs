@@ -5,6 +5,7 @@ using System.Threading;
 using System.Collections.Generic;
 using Quartz.Impl;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace RaFilDaBackupService
 {
@@ -12,9 +13,18 @@ namespace RaFilDaBackupService
     {
         public static IScheduler _sheduler = null;
         public static string API_URL = "https://localhost:5001/";
+        public static int ID { get; set; }
+        public static string TOKEN { get; set; }
 
         public static void Main(string[] args)
         {
+            var sr = new StreamReader(@"..\token.txt");
+            TOKEN = sr.ReadToEnd();
+            sr.Close();
+
+            var t = new HttpTools();
+            ID = t.GetID();
+
             CreateHostBuilder(args).Build().Run();
         }
         

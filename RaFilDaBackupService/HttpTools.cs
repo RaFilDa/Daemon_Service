@@ -9,20 +9,24 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using RaFilDaBackupService.Entities;
+using System.Net.Http.Headers;
 
 namespace RaFilDaBackupService
 {
     public class HttpTools
     {
-        public HttpClientHandler handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator };
+        private HttpClient _httpClient = new HttpClient(new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
+        public HttpTools()
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.TOKEN);
+        }
 
         public int GetCompConfigID(int confId)
         {
             try
             {
-                var httpClient = new HttpClient(handler);
-                string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + GetID();
-                HttpResponseMessage response = httpClient.GetAsync(URL).Result;
+                string URL = Program.API_URL + "Daemon/GetCompConfByCompID&ConfID?confId=" + confId + "&compId=" + Program.ID;
+                HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
                 Task<string> idData;
                 using (HttpContent content = response.Content)
                 {
@@ -55,37 +59,15 @@ namespace RaFilDaBackupService
             }
         }
 
-        public void GetAuth()
-        {
-            var httpClient = new HttpClient(handler);
-            var AuthLogin = new AuthLogin();
-            AuthLogin.login = "admin";
-            AuthLogin.password = "admin";
-
-            var AuthJsonLogin = JsonSerializer.Serialize(AuthLogin, new JsonSerializerOptions { WriteIndented = true });
-
-            HttpResponseMessage response = httpClient.GetAsync(Program.API_URL + "api/Sessions").Result;
-            Task<string> data;
-            using (HttpContent content = response.Content)
-            {
-                data = content.ReadAsStringAsync();
-            }
-
-            //data teď získají autentifikační token
-
-            //TODO: přidat logiku na ověření tokenu na API
-        }
-
         public int GetID()
         {
-            var httpClient = new HttpClient(handler);
             string MAC = NetworkInterface
                 .GetAllNetworkInterfaces()
                 .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                 .Select(nic => nic.GetPhysicalAddress().ToString())
                 .FirstOrDefault();
             string URL = Program.API_URL + "Computers/GetComputersByMAC/" + MAC;
-            HttpResponseMessage response = httpClient.GetAsync(URL).Result;
+            HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
             Task<string> userData;
             using (HttpContent content = response.Content)
             {
@@ -95,9 +77,9 @@ namespace RaFilDaBackupService
             if (userData.Result == "[]")
             {
                 var newComputer = new StringContent(JsonSerializer.Serialize(CreateComputerInfo()), Encoding.UTF8, "application/json");
-                httpClient.PostAsync(Program.API_URL + "Computers", newComputer);
+                _httpClient.PostAsync(Program.API_URL + "Computers", newComputer).Wait();
 
-                HttpResponseMessage newResponse = httpClient.GetAsync(URL).Result;
+                HttpResponseMessage newResponse = _httpClient.GetAsync(URL).Result;
                 using (HttpContent content = newResponse.Content)
                 {
                     userData = content.ReadAsStringAsync();
@@ -135,13 +117,9 @@ namespace RaFilDaBackupService
             {
                 try
                 {
-                    int ID = GetID();
+                    string URL = Program.API_URL + "Daemon/" + Program.ID;
 
-                    var httpClient = new HttpClient(handler);
-
-                    string URL = Program.API_URL + "Daemon/" + ID;
-
-                    HttpResponseMessage response = httpClient.GetAsync(URL).Result;
+                    HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
                     using (HttpContent content = response.Content)
                     {
                         inputData = content.ReadAsStringAsync();

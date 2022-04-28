@@ -9,12 +9,18 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using System.Threading;
+using System.Net.Http.Headers;
 
 namespace RaFilDaBackupService
 {
     public class BackupJob : IJob
     {
-        public HttpClientHandler handler = new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator };
+        private HttpClient _httpClient = new HttpClient(new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
+        public BackupJob()
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.TOKEN);
+        }
+
         public Task Execute(IJobExecutionContext context)
         {
             JobDataMap dataMap = context.JobDetail.JobDataMap;
@@ -71,14 +77,12 @@ namespace RaFilDaBackupService
 
             try
             {
-                var httpClient = new HttpClient(handler);
-
-                HttpResponseMessage response = httpClient.GetAsync(Program.API_URL + "Computers/GetComputersByID/1").Result;
+                HttpResponseMessage response = _httpClient.GetAsync(Program.API_URL + "Computers/GetComputersByID/1").Result;
 
                 foreach (Log l in oldLogs)
                 {
                     var newLog = new StringContent(JsonSerializer.Serialize(l), Encoding.UTF8, "application/json");
-                    httpClient.PostAsync(Program.API_URL + "Reports", newLog);
+                    _httpClient.PostAsync(Program.API_URL + "Reports", newLog);
                 }
 
                 List<Log> emptyLogs = new List<Log>();
