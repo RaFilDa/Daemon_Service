@@ -103,7 +103,7 @@ namespace RaFilDaBackupService
             string externalIpString = new WebClient().DownloadString("http://icanhazip.com").Replace("\\r\\n", "").Replace("\\n", "").Trim();
             var externalIp = IPAddress.Parse(externalIpString);
             c.IP = externalIp.ToString();
-            c.LastSeen = DateTime.Now;
+            c.LastSeen = DateTime.Now.ToString();
             return c;
         }
 

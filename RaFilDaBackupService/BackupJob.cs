@@ -87,6 +87,8 @@ namespace RaFilDaBackupService
 
                 List<Log> emptyLogs = new List<Log>();
                 t.UpdateFile(emptyLogs, @"..\log.json");
+
+                _httpClient.PutAsync(Program.API_URL + "Computers/UpdateLastSeen?id=" + Program.ID, null);
             }
             catch
             {

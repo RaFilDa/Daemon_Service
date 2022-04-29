@@ -9,15 +9,23 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using Quartz.Impl;
+using System.Net.Http.Headers;
 
 namespace RaFilDaBackupService
 {
     public class ScheduleJob : IJob
     {
+        private HttpClient _httpClient = new HttpClient(new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
+        public ScheduleJob()
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Program.TOKEN);
+        }
         public HttpTools tools = new HttpTools();
         public Task Execute(IJobExecutionContext context)
         {
-            if(Program._sheduler != null)
+            _httpClient.PutAsync(Program.API_URL + "Computers/UpdateLastSeen?id=" + Program.ID, null);
+
+            if (Program._sheduler != null)
                 Program._sheduler.Shutdown();
 
             BuildScheduler();
