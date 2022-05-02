@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 
 namespace RaFilDaBackupService
 {
+    [DisallowConcurrentExecution]
     public class BackupJob : IJob
     {
         private HttpClient _httpClient = new HttpClient(new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
@@ -118,6 +119,8 @@ namespace RaFilDaBackupService
 
             try
             {
+                if (!Directory.Exists(destination) || (!Directory.Exists(source)))
+                    return false;
                 StartBackup(typeBackup, source, destination, retention, packages, name);
                 return true;
             }

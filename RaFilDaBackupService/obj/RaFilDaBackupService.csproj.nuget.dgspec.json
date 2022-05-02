@@ -1,25 +1,27 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Radek\\RiderProjects\\Daemon\\RaFilDaBackupService\\RaFilDaBackupService.csproj": {}
+    "C:\\Users\\filda\\source\\repos\\RaFilDa\\Daemon_Service\\RaFilDaBackupService\\RaFilDaBackupService.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Radek\\RiderProjects\\Daemon\\RaFilDaBackupService\\RaFilDaBackupService.csproj": {
+    "C:\\Users\\filda\\source\\repos\\RaFilDa\\Daemon_Service\\RaFilDaBackupService\\RaFilDaBackupService.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Radek\\RiderProjects\\Daemon\\RaFilDaBackupService\\RaFilDaBackupService.csproj",
+        "projectUniqueName": "C:\\Users\\filda\\source\\repos\\RaFilDa\\Daemon_Service\\RaFilDaBackupService\\RaFilDaBackupService.csproj",
         "projectName": "RaFilDaBackupService",
-        "projectPath": "C:\\Users\\Radek\\RiderProjects\\Daemon\\RaFilDaBackupService\\RaFilDaBackupService.csproj",
-        "packagesPath": "C:\\Users\\Radek\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Radek\\RiderProjects\\Daemon\\RaFilDaBackupService\\obj\\",
+        "projectPath": "C:\\Users\\filda\\source\\repos\\RaFilDa\\Daemon_Service\\RaFilDaBackupService\\RaFilDaBackupService.csproj",
+        "packagesPath": "C:\\Users\\filda\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\filda\\source\\repos\\RaFilDa\\Daemon_Service\\RaFilDaBackupService\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Radek\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\filda\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net5.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -69,30 +71,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[5.0.0, 5.0.0]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[5.0.15, 5.0.15]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[5.0.0, 5.0.0]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[5.0.0, 5.0.0]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Users\\Radek\\.dotnet\\sdk\\6.0.201\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.102\\RuntimeIdentifierGraph.json"
         }
       }
     }

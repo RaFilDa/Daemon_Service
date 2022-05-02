@@ -1,0 +1,47 @@
+[
+  {
+    "Config": {
+      "Id": 48,
+      "Name": "Konfigo\u0161",
+      "RetentionSize": 3,
+      "BackupFrequency": "c",
+      "Cron": "0 * * * * ?",
+      "TimeZone": "UTC(\u002B0)",
+      "PackageSize": 3,
+      "BackupType": 2,
+      "FileType": true
+    },
+    "Destinations": [
+      {
+        "Id": 57,
+        "ConfigID": 48,
+        "Type": "Loc",
+        "Path": "X:\\TestDest\\",
+        "IP": "",
+        "Username": "",
+        "Password": ""
+      },
+      {
+        "Id": 58,
+        "ConfigID": 48,
+        "Type": "Loc",
+        "Path": "C:\\uahfiuhsef\\",
+        "IP": "",
+        "Username": "",
+        "Password": ""
+      }
+    ],
+    "Sources": [
+      {
+        "Id": 43,
+        "ConfigID": 48,
+        "Path": "X:\\TestSource\\"
+      },
+      {
+        "Id": 45,
+        "ConfigID": 48,
+        "Path": "C.\\jaenfuiehf\\"
+      }
+    ]
+  }
+]

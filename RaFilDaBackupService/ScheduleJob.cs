@@ -13,6 +13,7 @@ using System.Net.Http.Headers;
 
 namespace RaFilDaBackupService
 {
+    [DisallowConcurrentExecution]
     public class ScheduleJob : IJob
     {
         private HttpClient _httpClient = new HttpClient(new HttpClientHandler() { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
