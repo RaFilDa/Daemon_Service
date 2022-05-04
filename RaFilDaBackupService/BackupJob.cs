@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading;
 using System.Net.Http.Headers;
 
+using Ionic.Zip;
+
 namespace RaFilDaBackupService
 {
     [DisallowConcurrentExecution]
@@ -55,11 +57,12 @@ namespace RaFilDaBackupService
             string state = "";
 
             if (Backup(dataMap.GetInt("jobType"),
-                      dataMap.GetString("jobSource"),
-                      dataMap.GetString("jobDestination"),
-                      dataMap.GetInt("jobRetention"),
-                      dataMap.GetInt("jobPackages"),
-                      dataMap.GetString("jobName")))
+                        dataMap.GetBoolean("jobFileType"), 
+                        dataMap.GetString("jobSource"),
+                        dataMap.GetString("jobDestination"),
+                        dataMap.GetInt("jobRetention"),
+                        dataMap.GetInt("jobPackages"),
+                        dataMap.GetString("jobName")))
             {
                 state = "SUCCESSFUL";
                 log.IsError = false;
@@ -111,17 +114,17 @@ namespace RaFilDaBackupService
             return Task.CompletedTask;
         }
 
-        public static bool Backup(int type, string source, string destination, int retention, int packages, string name)
+        public static bool Backup(int typeBackup, bool typeFile, string source, string destination, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools();
 
-            string typeBackup = bt.GetType(type);
+            string type = bt.GetType(typeBackup);
 
             try
             {
                 if (!Directory.Exists(destination) || (!Directory.Exists(source)))
                     return false;
-                StartBackup(typeBackup, source, destination, retention, packages, name);
+                StartBackup(type, typeFile, source, destination, retention, packages, name);
                 return true;
             }
             catch (Exception e)
@@ -131,7 +134,7 @@ namespace RaFilDaBackupService
 
         }
 
-        private static void StartBackup(string typeBackup, string pathSource, string pathDestination, int retention, int packages, string name)
+        private static void StartBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools(retention, packages);
 
@@ -155,31 +158,65 @@ namespace RaFilDaBackupService
             if (typeBackup != "FULL_BACKUP")
             {
                 if (Convert.ToInt32(bt.GetInfo(infoPath)[2]) < bt.PACKAGES)
-                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 6) * -1) + "\\";
+                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 6) * -1);
                 else
-                    pathDestination += @"\FULL\";
-                Directory.CreateDirectory(pathDestination);
+                    pathDestination += @"\FULL";
+
+                if (typeFile)
+                {
+                    pathDestination = pathDestination + "\\";
+                    Directory.CreateDirectory(pathDestination);
+                }
             }
 
             DateTime snapshot = DateTime.Parse(bt.GetInfo(infoPath)[0]);
 
-            foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
+            if(typeFile)
             {
-                if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
-                    continue;
-                bt.Dirs.Add(dir);
-                Directory.CreateDirectory(dir.Replace(pathSource, pathDestination));
+                foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
+                {
+                    if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Dirs.Add(dir);
+                    Directory.CreateDirectory(dir.Replace(pathSource, pathDestination));
+                }
+
+                foreach (string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                {
+                    if (new FileInfo(file).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Files.Add(file);
+                    File.Copy(file, file.Replace(pathSource, pathDestination), true);
+                }
+            }
+            else
+            {
+                var dirs = new List<string>();
+                var files = new List<string>();
+                foreach(string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories)) 
+                {
+                    if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
+                        continue;
+                    dirs.Add(dir); 
+                }
+                foreach(string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                {
+                    if (new FileInfo(file).LastWriteTime <= snapshot)
+                        continue;
+                    files.Add(file);
+                }
+                using(ZipFile zip = new ZipFile())
+                {
+                    foreach(string dir in dirs)
+                    {
+                        zip.AddDirectory(dir);
+                    }
+                    zip.AddFiles(files);
+                    zip.Save(pathDestination + ".zip");
+                }
             }
 
-            foreach (string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
-            {
-                if (new FileInfo(file).LastWriteTime <= snapshot)
-                    continue;
-                bt.Files.Add(file);
-                File.Copy(file, file.Replace(pathSource, pathDestination), true);
-            }
-
-            if (int.Parse(bt.GetInfo(infoPath)[2]) == 5 || typeBackup != "DIFF_BACKUP")
+            if (int.Parse(bt.GetInfo(infoPath)[2]) == packages || typeBackup != "DIFF_BACKUP")
                 bt.UpdateFile(infoPath, DateTime.Now.ToString(), Convert.ToInt32(bt.GetInfo(infoPath)[1]), Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 1, bt.GetInfo(infoPath)[3]);
             else if (typeBackup == "DIFF_BACKUP")
                 bt.UpdateFile(infoPath, bt.GetInfo(infoPath)[0], Convert.ToInt32(bt.GetInfo(infoPath)[1]), Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 1, bt.GetInfo(infoPath)[3]);
@@ -189,7 +226,7 @@ namespace RaFilDaBackupService
                 bt.Pack(infoPath, typeBackup);
             }
 
-            bt.LogFiles(pathDestination);
+            //bt.LogFiles(pathDestination);
         }
     }
 }
