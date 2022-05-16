@@ -47,6 +47,7 @@ namespace RaFilDaBackupService
         public void BuildJobs(IScheduler sched)
         {
             var configs = tools.GetConfigs();
+            int prio = 1;
             foreach (ConfigInfo configInfo in configs)
             {
                 foreach (Source s in configInfo.Sources)
@@ -71,9 +72,11 @@ namespace RaFilDaBackupService
                             .ForJob(JobKey)
                             .WithIdentity("t_" + name)
                             .WithCronSchedule(configInfo.Config.Cron)
+                            .WithPriority(prio)
                             .Build();
 
                         sched.ScheduleJob(job, trigger);
+                        prio++;
                     }
                 }
             }

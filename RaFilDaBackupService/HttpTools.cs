@@ -61,33 +61,50 @@ namespace RaFilDaBackupService
 
         public int GetID()
         {
-            string MAC = NetworkInterface
-                .GetAllNetworkInterfaces()
-                .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .Select(nic => nic.GetPhysicalAddress().ToString())
-                .FirstOrDefault();
-            string URL = Program.API_URL + "Computers/GetComputersByMAC/" + MAC;
-            HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
-            Task<string> userData;
-            using (HttpContent content = response.Content)
-            {
-                userData = content.ReadAsStringAsync();
-            }
+            var c = new List<Computer>();
 
-            if (userData.Result == "[]")
+            while(c.Count == 0)
             {
-                var newComputer = new StringContent(JsonSerializer.Serialize(CreateComputerInfo()), Encoding.UTF8, "application/json");
-                _httpClient.PostAsync(Program.API_URL + "Computers", newComputer).Wait();
-
-                HttpResponseMessage newResponse = _httpClient.GetAsync(URL).Result;
-                using (HttpContent content = newResponse.Content)
+                try
                 {
-                    userData = content.ReadAsStringAsync();
+                    string MAC = NetworkInterface
+                    .GetAllNetworkInterfaces()
+                    .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    .Select(nic => nic.GetPhysicalAddress().ToString())
+                    .FirstOrDefault();
+                    string URL = Program.API_URL + "Computers/GetComputersByMAC/" + MAC;
+                    HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
+                    Task<string> userData;
+                    using (HttpContent content = response.Content)
+                    {
+                        userData = content.ReadAsStringAsync();
+                    }
+
+                    if (userData.Result == "[]")
+                    {
+                        var newComputer = new StringContent(JsonSerializer.Serialize(CreateComputerInfo()), Encoding.UTF8, "application/json");
+                        _httpClient.PostAsync(Program.API_URL + "Computers", newComputer).Wait();
+
+                        HttpResponseMessage newResponse = _httpClient.GetAsync(URL).Result;
+                        using (HttpContent content = newResponse.Content)
+                        {
+                            userData = content.ReadAsStringAsync();
+                        }
+                    }
+
+                    c = JsonSerializer.Deserialize<List<Computer>>(userData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
                 }
+                catch
+                {
+                    var t = new GenericHttpTools<CompConf>();
+                    var l = new List<CompConf>(t.LoadFile(@"..\CompConf.json"));
+                    if(l.Count > 0)
+                        c.Add(new Computer() { Id = l[0].CompID });
+                }
+
+                if (c.Count == 0)
+                    Thread.Sleep(10000);
             }
-
-            var c = JsonSerializer.Deserialize<List<Computer>>(userData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-
             return c[0].Id;
         }
 
@@ -113,29 +130,23 @@ namespace RaFilDaBackupService
             var t = new GenericHttpTools<ConfigInfo>();
             Task<string> inputData;
 
-            while(result.Count == 0)
+            try
             {
-                try
+                string URL = Program.API_URL + "Daemon/" + Program.ID;
+
+                HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
+                using (HttpContent content = response.Content)
                 {
-                    string URL = Program.API_URL + "Daemon/" + Program.ID;
-
-                    HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
-                    using (HttpContent content = response.Content)
-                    {
-                        inputData = content.ReadAsStringAsync();
-                    }
-
-                    result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
-
-                    t.UpdateFile(result, @"..\configs.json");
-                }
-                catch
-                {
-                    result = t.LoadFile(@"..\configs.json");
+                    inputData = content.ReadAsStringAsync();
                 }
 
-                if (result.Count == 0)
-                    Thread.Sleep(10000);
+                result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
+
+                t.UpdateFile(result, @"..\configs.json");
+            }
+            catch
+            {
+                result = t.LoadFile(@"..\configs.json");
             }
 
             return result;

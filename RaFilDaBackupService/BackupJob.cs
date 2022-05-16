@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Quartz;
+﻿using Quartz;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,7 +9,6 @@ using System.Text.Json;
 using System.Text;
 using System.Threading;
 using System.Net.Http.Headers;
-
 using Ionic.Zip;
 
 namespace RaFilDaBackupService
@@ -158,7 +156,7 @@ namespace RaFilDaBackupService
             if (typeBackup != "FULL_BACKUP")
             {
                 if (Convert.ToInt32(bt.GetInfo(infoPath)[2]) < bt.PACKAGES)
-                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 6) * -1);
+                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - bt.PACKAGES) * -1);
                 else
                     pathDestination += @"\FULL";
 
@@ -188,32 +186,34 @@ namespace RaFilDaBackupService
                     bt.Files.Add(file);
                     File.Copy(file, file.Replace(pathSource, pathDestination), true);
                 }
+
+                bt.LogFiles(pathDestination);
             }
             else
             {
-                var dirs = new List<string>();
-                var files = new List<string>();
                 foreach(string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories)) 
                 {
                     if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
                         continue;
-                    dirs.Add(dir); 
+                    bt.Dirs.Add(dir); 
                 }
                 foreach(string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
                 {
                     if (new FileInfo(file).LastWriteTime <= snapshot)
                         continue;
-                    files.Add(file);
+                    bt.Files.Add(file);
                 }
                 using(ZipFile zip = new ZipFile())
                 {
-                    foreach(string dir in dirs)
+                    foreach(string dir in bt.Dirs)
                     {
                         zip.AddDirectory(dir);
+                        zip.AddDirectoryByName(dir);
                     }
-                    zip.AddFiles(files);
+                    zip.AddFiles(bt.Files);
                     zip.Save(pathDestination + ".zip");
                 }
+                File.Delete(pathSource + @"backup_file_info.txt");
             }
 
             if (int.Parse(bt.GetInfo(infoPath)[2]) == packages || typeBackup != "DIFF_BACKUP")
@@ -225,8 +225,6 @@ namespace RaFilDaBackupService
             {
                 bt.Pack(infoPath, typeBackup);
             }
-
-            //bt.LogFiles(pathDestination);
         }
     }
 }
