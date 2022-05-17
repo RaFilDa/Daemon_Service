@@ -36,10 +36,10 @@ namespace RaFilDaBackupService
                     {
                         q.UseMicrosoftDependencyInjectionScopedJobFactory();
 
-                        var JobKey = new JobKey("Sheduler");
-                        q.AddJob<ScheduleJob>(opts => opts.WithIdentity(JobKey));
+                        var jobKey = new JobKey("Sheduler");
+                        q.AddJob<ScheduleJob>(opts => opts.WithIdentity(jobKey));
                         q.AddTrigger(opts => opts
-                            .ForJob(JobKey)
+                            .ForJob(jobKey)
                             .WithIdentity("t_Sheduler")
                             .WithSimpleSchedule(x => x
                                 .WithIntervalInSeconds(3600)
