@@ -9,6 +9,8 @@ using System.Text.Json;
 using System.Text;
 using System.Threading;
 using System.Net.Http.Headers;
+using System.Xml;
+using FluentFTP;
 using Ionic.Zip;
 
 namespace RaFilDaBackupService
@@ -57,7 +59,11 @@ namespace RaFilDaBackupService
             if (Backup(dataMap.GetInt("jobType"),
                         dataMap.GetBoolean("jobFileType"), 
                         dataMap.GetString("jobSource"),
-                        dataMap.GetString("jobDestination"),
+                        dataMap.GetString("jobDestinationType"),
+                        dataMap.GetString("jobDestinationPath"),
+                        dataMap.GetString("jobDestinationIP"),
+                        dataMap.GetString("jobDestinationUsername"),
+                        dataMap.GetString("jobDestinationPassword"),
                         dataMap.GetInt("jobRetention"),
                         dataMap.GetInt("jobPackages"),
                         dataMap.GetString("jobName")))
@@ -112,7 +118,7 @@ namespace RaFilDaBackupService
             return Task.CompletedTask;
         }
 
-        public static bool Backup(int typeBackup, bool typeFile, string source, string destination, int retention, int packages, string name)
+        public static bool Backup(int typeBackup, bool typeFile, string source, string destinationType, string destinationPath, string destinationIP, string destinationUsername, string destinationPassword, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools();
 
@@ -120,9 +126,13 @@ namespace RaFilDaBackupService
 
             try
             {
-                if (!Directory.Exists(destination) || (!Directory.Exists(source)))
+                if (!Directory.Exists(destinationPath) || (!Directory.Exists(source)))
                     return false;
-                StartBackup(type, typeFile, source, destination, retention, packages, name);
+                if (destinationType == "Loc")
+                    StartLocalBackup(type, typeFile, source, destinationPath, retention, packages, name);
+                else
+                    StartFTPBackup(type, typeFile, source, destinationPath, destinationIP, destinationUsername,
+                        destinationPassword, retention, packages, name);
                 return true;
             }
             catch (Exception e)
@@ -132,7 +142,7 @@ namespace RaFilDaBackupService
 
         }
 
-        private static void StartBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, int retention, int packages, string name)
+        private static void StartLocalBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools(retention, packages);
 
@@ -225,6 +235,107 @@ namespace RaFilDaBackupService
             {
                 bt.Pack(infoPath, typeBackup);
             }
+        }
+        
+        private static void StartFTPBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, string ip, string username, string password, int retention, int packages, string name)
+        {
+            BackupTools bt = new BackupTools(retention, packages);
+            FtpClient ftp = new FtpClient(ip, username, password);
+            ftp.EncryptionMode = FtpEncryptionMode.None;
+            ftp.Connect();
+
+            pathDestination = pathDestination + @"\" + name + @"\";
+
+            bt.NewLists();
+
+            typeBackup += "_BACKUP";
+
+            string infoPath = pathDestination + @$"\{typeBackup}\";
+
+            ftp.CreateDirectory(infoPath);
+
+            /* CHECK */
+            if (!bt.CheckForFileFTP(infoPath, ftp))
+                bt.UpdateFileFTP(infoPath, DateTime.MinValue.ToString(), bt.RETENTION, typeBackup == "FULL_BACKUP" ? 1 : bt.PACKAGES, "1", ftp);
+
+            pathDestination = pathDestination + @$"\{typeBackup}\" + "BACKUP_" + bt.GetInfoFTP(infoPath, ftp)[3] + pathSource.Remove(0, pathSource.LastIndexOf("\\"));
+
+            ftp.CreateDirectory(pathDestination);
+
+            if (typeBackup != "FULL_BACKUP")
+            {
+                if (Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) < bt.PACKAGES)
+                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) - bt.PACKAGES) * -1);
+                else
+                    pathDestination += @"\FULL";
+
+                if (typeFile)
+                {
+                    pathDestination = pathDestination + "\\";
+                    ftp.CreateDirectory(pathDestination);
+                }
+            }
+
+            DateTime snapshot = DateTime.Parse(bt.GetInfoFTP(infoPath, ftp)[0]);
+
+            if(typeFile)
+            {
+                foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
+                {
+                    if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Dirs.Add(dir);
+                    ftp.CreateDirectory(dir.Replace(pathSource, pathDestination));
+                }
+
+                foreach (string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                {
+                    if (new FileInfo(file).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Files.Add(file);
+                    ftp.UploadFile(file, file.Replace(pathSource, pathDestination));
+                }
+
+                bt.LogFilesFTP(pathDestination, ftp);
+            }
+            else
+            {
+                foreach(string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories)) 
+                {
+                    if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Dirs.Add(dir); 
+                }
+                foreach(string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                {
+                    if (new FileInfo(file).LastWriteTime <= snapshot)
+                        continue;
+                    bt.Files.Add(file);
+                }
+                using(ZipFile zip = new ZipFile())
+                {
+                    foreach(string dir in bt.Dirs)
+                    {
+                        zip.AddDirectory(dir);
+                        zip.AddDirectoryByName(dir);
+                    }
+                    zip.AddFiles(bt.Files);
+                    zip.Save(BackupTools.TMP + "tmp.zip");
+                    ftp.UploadFile(BackupTools.TMP + "tmp.zip", pathDestination + ".zip");
+                }
+                File.Delete(pathSource + @"backup_file_info.txt");
+            }
+
+            if (int.Parse(bt.GetInfoFTP(infoPath, ftp)[2]) == packages || typeBackup != "DIFF_BACKUP")
+                bt.UpdateFileFTP(infoPath, DateTime.Now.ToString(), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[1]), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) - 1, bt.GetInfoFTP(infoPath, ftp)[3], ftp);
+            else if (typeBackup == "DIFF_BACKUP")
+                bt.UpdateFileFTP(infoPath, bt.GetInfoFTP(infoPath, ftp)[0], Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[1]), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) - 1, bt.GetInfoFTP(infoPath, ftp)[3], ftp);
+            
+            if (bt.GetInfoFTP(infoPath, ftp)[2] == "0")
+            {
+                bt.PackFTP(infoPath, typeBackup, ftp);
+            }
+            ftp.Disconnect();
         }
     }
 }

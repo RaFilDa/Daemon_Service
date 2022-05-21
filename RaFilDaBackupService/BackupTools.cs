@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using FluentFTP;
 using Ionic.Zip;
 
 namespace RaFilDaBackupService
@@ -14,6 +15,7 @@ namespace RaFilDaBackupService
         {
             RETENTION = retention;
             PACKAGES = packages;
+            Directory.CreateDirectory(TMP);
         }
 
         public int RETENTION { get; set; }
@@ -22,6 +24,7 @@ namespace RaFilDaBackupService
         public List<string> Files = new List<string>();
         public List<string> NewFiles = new List<string>();
         public List<string> NewDirs = new List<string>();
+        public const string TMP = "C:\\temp\\";
         public void NewLists()
         {
             Dirs = new List<string>();
@@ -85,10 +88,38 @@ namespace RaFilDaBackupService
                 sw.Close();
             }
         }
+        
+        public void LogFilesFTP(string path, FtpClient ftp)
+        {
+            using StreamWriter sw = new StreamWriter(TMP + @"backup_file_info.txt");
+            {
+                sw.WriteLine("Dirs:");
+                foreach (string item in Dirs)
+                {
+                    sw.WriteLine(item);
+                }
+                sw.WriteLine("Files:");
+                foreach (string item in Files)
+                {
+                    sw.WriteLine(item);
+                }
+                sw.Close();
+            }
+
+            ftp.UploadFile(TMP + @"backup_file_info.txt", path + @"backup_file_info.txt");
+            File.Delete(TMP + @"backup_file_info.txt");
+        }
 
         public bool CheckForFile(string path)
         {
             if (!File.Exists(path + @"info.txt"))
+                return false;
+            else
+                return true;
+        }
+        public bool CheckForFileFTP(string path, FtpClient ftp)
+        {
+            if (!ftp.FileExists(path + "info.txt"))
                 return false;
             else
                 return true;
@@ -110,6 +141,25 @@ namespace RaFilDaBackupService
                 sw.Close();
             }
         }
+        public void UpdateFileFTP(string path, string snapshot, int retention, int? packages, string number, FtpClient ftp)
+        {
+            //1st line = last snapshot time
+            //2nd line = RETENTION
+            //3rd line = PACKAGES
+            //4th line = number of backup
+
+            using StreamWriter sw = new StreamWriter(TMP + @"info.txt");
+            {
+                sw.WriteLine(snapshot);
+                sw.WriteLine(retention);
+                sw.WriteLine(packages);
+                sw.WriteLine(number);
+                sw.Close();
+            }
+
+            ftp.UploadFile(TMP + @"info.txt", path + @"info.txt");
+            File.Delete(TMP + @"info.txt");
+        }
 
         public string[] GetInfo(string path)
         {
@@ -126,6 +176,24 @@ namespace RaFilDaBackupService
             }
             return result;
         }
+        
+        public string[] GetInfoFTP(string path, FtpClient ftp)
+        {
+            string[] result = new string[4];
+            int indexer = 0;
+            ftp.DownloadFile(TMP + @"info.txt", path + @"info.txt");
+            using StreamReader sr = new StreamReader(TMP + @"info.txt");
+            {
+                while (!sr.EndOfStream)
+                {
+                    result[indexer] = sr.ReadLine();
+                    indexer++;
+                }
+                sr.Close();
+            }
+            File.Delete(TMP + @"info.txt");
+            return result;
+        }
 
         public void Pack(string path, string typeBackup)
         {
@@ -137,8 +205,19 @@ namespace RaFilDaBackupService
             }
             UpdateFile(path, DateTime.MinValue.ToString(), retention - 1, typeBackup == "FULL_BACKUP" ? 1 : PACKAGES, (Convert.ToInt32(GetInfo(path)[3]) + 1).ToString());
         }
+        
+        public void PackFTP(string path, string typeBackup, FtpClient ftp)
+        {
+            int retention = Convert.ToInt32(GetInfoFTP(path, ftp)[1]);
+            if (retention == 1)
+            {
+                DeleteOldestFTP(path, ftp);
+                retention++;
+            }
+            UpdateFileFTP(path, DateTime.MinValue.ToString(), retention - 1, typeBackup == "FULL_BACKUP" ? 1 : PACKAGES, (Convert.ToInt32(GetInfoFTP(path, ftp)[3]) + 1).ToString(), ftp);
+        }
 
-        public void DeleteOldest(string path)
+        private void DeleteOldest(string path)
         {
             List<DirectoryInfo> dirs = new List<DirectoryInfo>();
             foreach (string dir in Directory.GetDirectories(path))
@@ -148,6 +227,15 @@ namespace RaFilDaBackupService
 
             dirs.Sort((x, y) => x.CreationTime.CompareTo(y.CreationTime));
             dirs[0].Delete(true);
+        }
+        
+        private void DeleteOldestFTP(string path, FtpClient ftp)
+        {
+            FtpListItem[] dirs = ftp.GetListing(path).Where(x => x.Type == FtpFileSystemObjectType.Directory).ToArray();
+
+            string oldest = dirs.OrderBy(x => x.Created).First().FullName;
+                
+            ftp.DeleteDirectory(oldest);
         }
     }
 }

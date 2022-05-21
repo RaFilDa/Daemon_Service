@@ -63,7 +63,11 @@ namespace RaFilDaBackupService
                             .UsingJobData("jobType", configInfo.Config.BackupType)
                             .UsingJobData("jobFileType", configInfo.Config.FileType)
                             .UsingJobData("jobSource", s.Path)
-                            .UsingJobData("jobDestination", d.Path)
+                            .UsingJobData("jobDestinationType", d.Type)
+                            .UsingJobData("jobDestinationPath", d.Path)
+                            .UsingJobData("jobDestinationIP", d.IP)
+                            .UsingJobData("jobDestinationUsername", d.Username)
+                            .UsingJobData("jobDestinationPassword", d.Password)
                             .UsingJobData("jobRetention", configInfo.Config.RetentionSize)
                             .UsingJobData("jobPackages", configInfo.Config.PackageSize)
                             .Build();

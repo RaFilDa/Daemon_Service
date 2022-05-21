@@ -71,7 +71,7 @@ namespace RaFilDaBackupService
                     .GetAllNetworkInterfaces()
                     .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                     .Select(nic => nic.GetPhysicalAddress().ToString())
-                    .FirstOrDefault();
+                    .First();
                     string URL = Program.API_URL + "Computers/GetComputersByMAC/" + MAC;
                     HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
                     Task<string> userData;
