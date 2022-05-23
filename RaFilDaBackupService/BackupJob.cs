@@ -79,7 +79,10 @@ namespace RaFilDaBackupService
 
             log.CompConfID = t2.GetCompConfigID(dataMap.GetInt("jobId"));
             log.Type = bt.GetType(dataMap.GetInt("jobType"));
-            log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestination");
+            if(dataMap.GetString("jobDestinationType") == "FTP")
+                log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestinationIP") + @"\" + dataMap.GetString("jobDestinationPath");
+            else
+                log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestinationPath");
 
             oldLogs.Add(log);
 
