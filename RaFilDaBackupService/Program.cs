@@ -11,7 +11,7 @@ namespace RaFilDaBackupService
 {
     public class Program
     {
-        public static IScheduler _sheduler = null;
+        public static IScheduler _scheduler = null;
         public static string API_URL = "https://localhost:5001/";
         public static int ID { get; set; }
         public static string TOKEN { get; set; }
@@ -36,11 +36,11 @@ namespace RaFilDaBackupService
                     {
                         q.UseMicrosoftDependencyInjectionScopedJobFactory();
 
-                        var jobKey = new JobKey("Sheduler");
+                        var jobKey = new JobKey("Scheduler");
                         q.AddJob<ScheduleJob>(opts => opts.WithIdentity(jobKey));
                         q.AddTrigger(opts => opts
                             .ForJob(jobKey)
-                            .WithIdentity("t_Sheduler")
+                            .WithIdentity("t_Scheduler")
                             .WithSimpleSchedule(x => x
                                 .WithIntervalInSeconds(3600)
                                 .RepeatForever()));
