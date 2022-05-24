@@ -26,11 +26,8 @@ namespace RaFilDaBackupService
         {
             _httpClient.PutAsync(Program.API_URL + "Computers/UpdateLastSeen?id=" + Program.ID, null);
 
-            if (Program._scheduler != null)
-            {
-                Program._scheduler.Shutdown();
-                Program._scheduler.Clear();
-            }
+            if (Program._sheduler != null)
+                Program._sheduler.Shutdown();
 
             BuildScheduler();
 
@@ -41,9 +38,9 @@ namespace RaFilDaBackupService
         {
             ISchedulerFactory schedulerFactory = new StdSchedulerFactory();
             IScheduler scheduler = schedulerFactory.GetScheduler().Result;
-            Program._scheduler = scheduler;
-            Program._scheduler.Start();
-            BuildJobs(Program._scheduler);
+            Program._sheduler = scheduler;
+            Program._sheduler.Start();
+            BuildJobs(Program._sheduler);
         }
 
 

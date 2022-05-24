@@ -12,7 +12,6 @@ using System.Net.Http.Headers;
 using System.Xml;
 using FluentFTP;
 using Ionic.Zip;
-using SimpleImpersonation;
 
 namespace RaFilDaBackupService
 {
@@ -240,7 +239,7 @@ namespace RaFilDaBackupService
                 bt.Pack(infoPath, typeBackup);
             }
         }
-
+        
         private static void StartFTPBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, string ip, string username, string password, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools(retention, packages);
@@ -318,20 +317,6 @@ namespace RaFilDaBackupService
                 }
                 using(ZipFile zip = new ZipFile())
                 {
-                    foreach (string dir in bt.Dirs)
-                    {
-                        zip.AddDirectory(dir);
-                        zip.AddDirectoryByName(dir);
-                    }
-                    zip.AddFiles(bt.Files);
-
-                    var credentials = new UserCredentials(username, password);
-                    Impersonation.RunAsUser(credentials, LogonType.NewCredentials, () =>
-                    {
-                        zip.Save("ftp://" + ip + pathDestination + ".zip");
-                    });
-
-                    /*
                     foreach(string dir in bt.Dirs)
                     {
                         zip.AddDirectory(dir);
@@ -340,7 +325,6 @@ namespace RaFilDaBackupService
                     zip.AddFiles(bt.Files);
                     zip.Save(BackupTools.TMP + "tmp.zip");
                     ftp.UploadFile(BackupTools.TMP + "tmp.zip", pathDestination + ".zip");
-                    */
                 }
                 File.Delete(pathSource + @"backup_file_info.txt");
             }
