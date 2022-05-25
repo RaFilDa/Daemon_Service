@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using RaFilDaBackupService.Entities;
 using System.Net.Http;
+using System.Net;
 using System.Text.Json;
 using System.Text;
 using System.Threading;
@@ -12,6 +13,7 @@ using System.Net.Http.Headers;
 using System.Xml;
 using FluentFTP;
 using Ionic.Zip;
+using System.IO.Compression;
 
 namespace RaFilDaBackupService
 {
@@ -57,7 +59,7 @@ namespace RaFilDaBackupService
             string state = "";
 
             if (Backup(dataMap.GetInt("jobType"),
-                        dataMap.GetBoolean("jobFileType"), 
+                        dataMap.GetBoolean("jobFileType"),
                         dataMap.GetString("jobSource"),
                         dataMap.GetString("jobDestinationType"),
                         dataMap.GetString("jobDestinationPath"),
@@ -70,7 +72,7 @@ namespace RaFilDaBackupService
             {
                 state = "SUCCESSFUL";
                 log.IsError = false;
-            }   
+            }
             else
             {
                 state = "ERROR";
@@ -79,7 +81,7 @@ namespace RaFilDaBackupService
 
             log.CompConfID = t2.GetCompConfigID(dataMap.GetInt("jobId"));
             log.Type = bt.GetType(dataMap.GetInt("jobType"));
-            if(dataMap.GetString("jobDestinationType") == "FTP")
+            if (dataMap.GetString("jobDestinationType") == "FTP")
                 log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestinationIP") + @"\" + dataMap.GetString("jobDestinationPath");
             else
                 log.Message = "BACKUP " + state + ": " + dataMap.GetString("jobName") + " | SOURCE: " + dataMap.GetString("jobSource") + " | DESTINATION: " + dataMap.GetString("jobDestinationPath");
@@ -104,7 +106,7 @@ namespace RaFilDaBackupService
             catch
             {
                 bool repeat = true;
-                while(repeat)
+                while (repeat)
                 {
                     try
                     {
@@ -134,7 +136,7 @@ namespace RaFilDaBackupService
                 if (destinationType == "Loc")
                     StartLocalBackup(type, typeFile, source, destinationPath, retention, packages, name);
                 else
-                    StartFTPBackup(type, typeFile, source, destinationPath, destinationIP, destinationUsername,
+                    StartFTPBackupAsync(type, typeFile, source, destinationPath, destinationIP, destinationUsername,
                         destinationPassword, retention, packages, name);
                 return true;
             }
@@ -182,7 +184,7 @@ namespace RaFilDaBackupService
 
             DateTime snapshot = DateTime.Parse(bt.GetInfo(infoPath)[0]);
 
-            if(typeFile)
+            if (typeFile)
             {
                 foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
                 {
@@ -204,21 +206,21 @@ namespace RaFilDaBackupService
             }
             else
             {
-                foreach(string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories)) 
+                foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
                 {
                     if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
                         continue;
-                    bt.Dirs.Add(dir); 
+                    bt.Dirs.Add(dir);
                 }
-                foreach(string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                foreach (string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
                 {
                     if (new FileInfo(file).LastWriteTime <= snapshot)
                         continue;
                     bt.Files.Add(file);
                 }
-                using(ZipFile zip = new ZipFile())
+                using (Ionic.Zip.ZipFile zip = new Ionic.Zip.ZipFile())
                 {
-                    foreach(string dir in bt.Dirs)
+                    foreach (string dir in bt.Dirs)
                     {
                         zip.AddDirectory(dir);
                         zip.AddDirectoryByName(dir);
@@ -239,8 +241,8 @@ namespace RaFilDaBackupService
                 bt.Pack(infoPath, typeBackup);
             }
         }
-        
-        private static void StartFTPBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, string ip, string username, string password, int retention, int packages, string name)
+
+        private static void StartFTPBackupAsync(string typeBackup, bool typeFile, string pathSource, string pathDestination, string ip, string username, string password, int retention, int packages, string name)
         {
             BackupTools bt = new BackupTools(retention, packages);
             FtpClient ftp = new FtpClient(ip, username, password);
@@ -281,7 +283,7 @@ namespace RaFilDaBackupService
 
             DateTime snapshot = DateTime.Parse(bt.GetInfoFTP(infoPath, ftp)[0]);
 
-            if(typeFile)
+            if (typeFile)
             {
                 foreach (string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories))
                 {
@@ -303,37 +305,45 @@ namespace RaFilDaBackupService
             }
             else
             {
-                foreach(string dir in Directory.GetDirectories(pathSource, "*", SearchOption.AllDirectories)) 
+                using (Stream memoryStream = new MemoryStream())
                 {
-                    if (new DirectoryInfo(dir).LastWriteTime <= snapshot)
-                        continue;
-                    bt.Dirs.Add(dir); 
-                }
-                foreach(string file in Directory.GetFiles(pathSource, "*.*", SearchOption.AllDirectories))
-                {
-                    if (new FileInfo(file).LastWriteTime <= snapshot)
-                        continue;
-                    bt.Files.Add(file);
-                }
-                using(ZipFile zip = new ZipFile())
-                {
-                    foreach(string dir in bt.Dirs)
+                    using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
                     {
-                        zip.AddDirectory(dir);
-                        zip.AddDirectoryByName(dir);
+                        foreach (string path in Directory.EnumerateFiles(pathSource, "*.*", SearchOption.AllDirectories))
+                        {
+                            if (new FileInfo(path).LastWriteTime <= snapshot)
+                                continue;
+
+                            ZipArchiveEntry entry = archive.CreateEntry(path);
+
+                            using (Stream entryStream = entry.Open())
+                            using (Stream fileStream = File.OpenRead(path))
+                            {
+                                fileStream.CopyTo(entryStream);
+                            }
+                        }
+
                     }
-                    zip.AddFiles(bt.Files);
-                    zip.Save(BackupTools.TMP + "tmp.zip");
-                    ftp.UploadFile(BackupTools.TMP + "tmp.zip", pathDestination + ".zip");
+
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+
+                    var request =
+                        WebRequest.Create("ftp://" + ip + "/" + pathDestination + ".zip");
+                    request.Credentials = new NetworkCredential(username, password);
+                    request.Method = WebRequestMethods.Ftp.UploadFile;
+                    using (Stream ftpStream = request.GetRequestStream())
+                    {
+                        memoryStream.CopyTo(ftpStream);
+                    }
+                    memoryStream.Dispose();
                 }
-                File.Delete(pathSource + @"backup_file_info.txt");
             }
 
             if (int.Parse(bt.GetInfoFTP(infoPath, ftp)[2]) == packages || typeBackup != "DIFF_BACKUP")
                 bt.UpdateFileFTP(infoPath, DateTime.Now.ToString(), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[1]), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) - 1, bt.GetInfoFTP(infoPath, ftp)[3], ftp);
             else if (typeBackup == "DIFF_BACKUP")
                 bt.UpdateFileFTP(infoPath, bt.GetInfoFTP(infoPath, ftp)[0], Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[1]), Convert.ToInt32(bt.GetInfoFTP(infoPath, ftp)[2]) - 1, bt.GetInfoFTP(infoPath, ftp)[3], ftp);
-            
+
             if (bt.GetInfoFTP(infoPath, ftp)[2] == "0")
             {
                 bt.PackFTP(infoPath, typeBackup, ftp);
