@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace RaFilDaBackupService
 {
-    class LocalBackupTool : BackupTool
+    class LocRemBackupTool : BackupTool
     {
-        public LocalBackupTool(int retention, int packages)
+        public LocRemBackupTool(int retention, int packages)
         {
             RETENTION = retention;
             PACKAGES = packages;

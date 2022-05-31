@@ -32,7 +32,7 @@ namespace RaFilDaBackupService
 
             List<Log> oldLogs = new List<Log>();
 
-            var bt = new LocalBackupTool(0,0);
+            var bt = new LocRemBackupTool(0,0);
             var t = new GenericHttpTools<Log>();
             var t2 = new HttpTools();
             try
@@ -125,17 +125,10 @@ namespace RaFilDaBackupService
 
         public static bool Backup(int typeBackup, bool typeFile, string source, string destinationType, string destinationPath, string destinationIP, string destinationUsername, string destinationPassword, int retention, int packages, string name)
         {
-            BackupTool bt = new LocalBackupTool(retention, packages);
-            switch(destinationType)
-            {
-                case "FTP":
-                    bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword, retention, packages);
-                    break;
-                case "Rem":
-                    //TODO Remote folder Tool 
-                    break;
-            }
-
+            BackupTool bt = new LocRemBackupTool(retention, packages);
+            if(destinationType == "FTP")
+                bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword, retention, packages);
+            
             string type = bt.GetType(typeBackup);
 
             try
