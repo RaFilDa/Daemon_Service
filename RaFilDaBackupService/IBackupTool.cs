@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace RaFilDaBackupService
 {
-    abstract class BackupTool
+    abstract class BackupTool : IDisposable
     {
         public int RETENTION { get; set; }
         public int PACKAGES { get; set; }
@@ -63,14 +64,15 @@ namespace RaFilDaBackupService
             }
         }
 
-        public virtual void LogFiles(string path) { throw new NotImplementedException(); }
-        public virtual bool CheckForFile(string path) { throw new NotImplementedException(); }
-        public virtual void UpdateFile(string path, string snapshot, int retention, int? packages, string number) { throw new NotImplementedException(); }
-        public virtual string[] GetInfo(string path) { throw new NotImplementedException(); }
-        public virtual void Pack(string path, string typeBackup) { throw new NotImplementedException(); }
-        public virtual void DeleteOldest(string path) { throw new NotImplementedException(); }
-        public virtual void Zip(string pathSource, string pathDestination, DateTime snapshot) { throw new NotImplementedException(); }
+        public virtual void LogFiles(string path) => throw new NotImplementedException();
+        public virtual bool CheckForFile(string path) => throw new NotImplementedException();
+        public virtual void UpdateFile(string path, string snapshot, int retention, int? packages, string number) => throw new NotImplementedException();
+        public virtual string[] GetInfo(string path) => throw new NotImplementedException();
+        public virtual void Pack(string path, string typeBackup) => throw new NotImplementedException();
+        public virtual void DeleteOldest(string path) => throw new NotImplementedException();
+        public virtual void Zip(string pathSource, string pathDestination, DateTime snapshot) => throw new NotImplementedException();
         public virtual void CreateDirectory(string path) => throw new NotImplementedException();
         public virtual void Copy(string source, string dest) => throw new NotImplementedException();
+        public virtual void Dispose() { }
     }
 }

@@ -12,11 +12,15 @@ namespace RaFilDaBackupService
 {
     class FTPBackupTool : BackupTool, IDisposable
     {
-        public FTPBackupTool(string ip, string username, string password)
+        public FTPBackupTool(string ip, string username, string password, int retention, int packages)
         {
             this.ip = ip;
             this.username = username;
             this.password = password;
+
+            RETENTION = retention;
+            PACKAGES = packages;
+            
             ftp = new FtpClient(this.ip, this.username, this.password);
             ftp.EncryptionMode = FtpEncryptionMode.None;
             ftp.Connect();
@@ -50,10 +54,7 @@ namespace RaFilDaBackupService
 
         public override bool CheckForFile(string path)
         {
-            if (!ftp.FileExists(path + "info.txt"))
-                return false;
-            else
-                return true;
+            return ftp.FileExists(path + "info.txt");
         }
         public override void UpdateFile(string path, string snapshot, int retention, int? packages, string number)
         {
@@ -96,7 +97,7 @@ namespace RaFilDaBackupService
         public override void Pack(string path, string typeBackup)
         {
             int retention = Convert.ToInt32(GetInfo(path)[1]);
-            if (retention == 1)
+            if (retention == 0)
             {
                 DeleteOldest(path);
                 retention++;
@@ -159,7 +160,7 @@ namespace RaFilDaBackupService
             ftp.UploadFile(source, dest);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             ftp.Disconnect();
         }

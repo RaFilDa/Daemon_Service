@@ -9,10 +9,15 @@ namespace RaFilDaBackupService
 {
     class LocalBackupTool : BackupTool
     {
+        public LocalBackupTool(int retention, int packages)
+        {
+            RETENTION = retention;
+            PACKAGES = packages;
+        }
 
         public override bool CheckForFile(string path)
         {
-            return !File.Exists(path + @"info.txt");
+            return File.Exists(path + @"info.txt");
         }
 
         public override void DeleteOldest(string path)
@@ -64,7 +69,7 @@ namespace RaFilDaBackupService
         public override void Pack(string path, string typeBackup)
         {
             int retention = Convert.ToInt32(GetInfo(path)[1]);
-            if (retention == 1)
+            if (retention == 0)
             {
                 DeleteOldest(path);
                 retention++;
@@ -105,11 +110,11 @@ namespace RaFilDaBackupService
             }
             using (Ionic.Zip.ZipFile zip = new Ionic.Zip.ZipFile())
             {
-                foreach (string dir in Dirs)
-                {
-                    zip.AddDirectory(dir);
-                    zip.AddDirectoryByName(dir);
-                }
+                // foreach (string dir in Dirs)
+                // {
+                //     zip.AddDirectory(dir);
+                //     zip.AddDirectoryByName(dir);
+                // }
                 zip.AddFiles(Files);
                 zip.Save(pathDestination + ".zip");
             }

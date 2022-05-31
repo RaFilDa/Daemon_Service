@@ -32,7 +32,7 @@ namespace RaFilDaBackupService
 
             List<Log> oldLogs = new List<Log>();
 
-            var bt = new LocalBackupTool();
+            var bt = new LocalBackupTool(0,0);
             var t = new GenericHttpTools<Log>();
             var t2 = new HttpTools();
             try
@@ -125,11 +125,11 @@ namespace RaFilDaBackupService
 
         public static bool Backup(int typeBackup, bool typeFile, string source, string destinationType, string destinationPath, string destinationIP, string destinationUsername, string destinationPassword, int retention, int packages, string name)
         {
-            BackupTool bt = new LocalBackupTool();
+            BackupTool bt = new LocalBackupTool(retention, packages);
             switch(destinationType)
             {
                 case "FTP":
-                    bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword);
+                    bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword, retention, packages);
                     break;
                 case "Rem":
                     //TODO Remote folder Tool 
@@ -141,18 +141,23 @@ namespace RaFilDaBackupService
             try
             {
                 if ((!Directory.Exists(destinationPath) && destinationType == "Loc") || (!Directory.Exists(source)))
+                {
+                    bt.Dispose();
                     return false;
-                StartLocalBackup(type, typeFile, source, destinationPath, retention, packages, name, bt);
+                }
+                StartBackup(type, typeFile, source, destinationPath, retention, packages, name, bt);
+                bt.Dispose();
                 return true;
             }
             catch (Exception e)
             {
+                bt.Dispose();
                 return false;
             }
-
+            
         }
 
-        private static void StartLocalBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, int retention, int packages, string name, BackupTool bt)
+        private static void StartBackup(string typeBackup, bool typeFile, string pathSource, string pathDestination, int retention, int packages, string name, BackupTool bt)
         {
             pathDestination = pathDestination + @"\" + name + @"\";
 
@@ -171,18 +176,14 @@ namespace RaFilDaBackupService
 
             bt.CreateDirectory(pathDestination);
 
-            if (typeBackup != "FULL_BACKUP")
+            if (Convert.ToInt32(bt.GetInfo(infoPath)[2]) < bt.PACKAGES && typeBackup != "FULL_BACKUP")
+                pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - bt.PACKAGES) * -1);
+            else
+                pathDestination += @"\FULL";
+            if (typeFile)
             {
-                if (Convert.ToInt32(bt.GetInfo(infoPath)[2]) < bt.PACKAGES)
-                    pathDestination += @"\PACKAGE_" + ((Convert.ToInt32(bt.GetInfo(infoPath)[2]) - bt.PACKAGES) * -1);
-                else
-                    pathDestination += @"\FULL";
-
-                if (typeFile)
-                {
-                    pathDestination = pathDestination + "\\";
-                    bt.CreateDirectory(pathDestination);
-                }
+                bt.CreateDirectory(pathDestination);
+                pathDestination += "\\";
             }
 
             DateTime snapshot = DateTime.Parse(bt.GetInfo(infoPath)[0]);
@@ -212,9 +213,9 @@ namespace RaFilDaBackupService
                 bt.Zip(pathSource, pathDestination, snapshot);
             }
 
-            if (int.Parse(bt.GetInfo(infoPath)[2]) == packages || typeBackup != "DIFF_BACKUP")
+            if ((int.Parse(bt.GetInfo(infoPath)[2]) == packages || typeBackup != "DIFF_BACKUP") && typeBackup != "FULL_BACKUP")
                 bt.UpdateFile(infoPath, DateTime.Now.ToString(), Convert.ToInt32(bt.GetInfo(infoPath)[1]), Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 1, bt.GetInfo(infoPath)[3]);
-            else if (typeBackup == "DIFF_BACKUP")
+            else
                 bt.UpdateFile(infoPath, bt.GetInfo(infoPath)[0], Convert.ToInt32(bt.GetInfo(infoPath)[1]), Convert.ToInt32(bt.GetInfo(infoPath)[2]) - 1, bt.GetInfo(infoPath)[3]);
 
             if (bt.GetInfo(infoPath)[2] == "0")
