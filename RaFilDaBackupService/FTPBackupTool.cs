@@ -116,9 +116,13 @@ namespace RaFilDaBackupService
 
         public override void Zip(string pathSource, string pathDestination, DateTime snapshot)
         {
-            using (Stream memoryStream = new MemoryStream())
+            var request = WebRequest.Create("ftp://" + ip + "/" + pathDestination + ".zip");
+            request.Credentials = new NetworkCredential(username, password);
+            request.Method = WebRequestMethods.Ftp.UploadFile;
+
+            using (Stream ftpStream = request.GetRequestStream())
             {
-                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                using (var archive = new ZipArchive(ftpStream, ZipArchiveMode.Create, true))
                 {
                     foreach (string path in Directory.EnumerateFiles(pathSource, "*.*", SearchOption.AllDirectories))
                     {
@@ -135,18 +139,6 @@ namespace RaFilDaBackupService
                     }
 
                 }
-
-                memoryStream.Seek(0, SeekOrigin.Begin);
-
-                var request =
-                    WebRequest.Create("ftp://" + ip + "/" + pathDestination + ".zip");
-                request.Credentials = new NetworkCredential(username, password);
-                request.Method = WebRequestMethods.Ftp.UploadFile;
-                using (Stream ftpStream = request.GetRequestStream())
-                {
-                    memoryStream.CopyTo(ftpStream);
-                }
-                memoryStream.Dispose();
             }
         }
 
