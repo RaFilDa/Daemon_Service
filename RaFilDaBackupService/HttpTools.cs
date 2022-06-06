@@ -130,23 +130,28 @@ namespace RaFilDaBackupService
             var t = new GenericHttpTools<ConfigInfo>();
             Task<string> inputData;
 
-            try
+            while (result.Count == 0)
             {
-                string URL = Program.API_URL + "Daemon/" + Program.ID;
-
-                HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
-                using (HttpContent content = response.Content)
+                try
                 {
-                    inputData = content.ReadAsStringAsync();
+                    string URL = Program.API_URL + "Daemon/" + Program.ID;
+
+                    HttpResponseMessage response = _httpClient.GetAsync(URL).Result;
+                    using (HttpContent content = response.Content)
+                    {
+                        inputData = content.ReadAsStringAsync();
+                    }
+
+                    result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
+
+                    t.UpdateFile(result, @"..\configs.json");
                 }
-
-                result = JsonSerializer.Deserialize<List<ConfigInfo>>(inputData.Result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true });
-
-                t.UpdateFile(result, @"..\configs.json");
-            }
-            catch
-            {
-                result = t.LoadFile(@"..\configs.json");
+                catch
+                {
+                    result = t.LoadFile(@"..\configs.json");
+                }
+                if (result.Count == 0)
+                    Thread.Sleep(10000);
             }
 
             return result;
