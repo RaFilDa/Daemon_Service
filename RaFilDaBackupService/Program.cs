@@ -14,13 +14,24 @@ namespace RaFilDaBackupService
         public static IScheduler _sheduler = null;
         public static string API_URL = "https://localhost:5001/";
         public static int ID { get; set; }
-        public static string TOKEN { get; set; }
+        public static string TOKEN = "";
 
         public static void Main(string[] args)
         {
-            var sr = new StreamReader(@"..\token.txt");
-            TOKEN = sr.ReadToEnd();
-            sr.Close();
+            while(TOKEN == "")
+            {
+                var sr = new StreamReader(@"..\token.txt");
+                TOKEN = sr.ReadToEnd();
+                sr.Close();
+                if (TOKEN == "")
+                {
+                    System.Console.WriteLine("Please insert a token into the token.txt file. You can generate it on the Sessions tab. If you are still having any trouble with adding a new token, please refer to our support at support@rafilda.com");
+                    Thread.Sleep(10000);
+                    System.Console.Clear();
+                }
+            }
+
+            System.Console.WriteLine("Token successfuly added.");
 
             var t = new HttpTools();
             ID = t.GetID();
