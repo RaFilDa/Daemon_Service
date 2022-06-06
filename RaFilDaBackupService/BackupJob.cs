@@ -126,8 +126,15 @@ namespace RaFilDaBackupService
         public static bool Backup(int typeBackup, bool typeFile, string source, string destinationType, string destinationPath, string destinationIP, string destinationUsername, string destinationPassword, int retention, int packages, string name)
         {
             BackupTool bt = new LocRemBackupTool(retention, packages);
-            if(destinationType == "FTP")
-                bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword, retention, packages);
+            try
+            {
+                if (destinationType == "FTP")
+                    bt = new FTPBackupTool(destinationIP, destinationUsername, destinationPassword, retention, packages);
+            }
+            catch(Exception e)
+            {
+                return false;
+            }
             
             string type = bt.GetType(typeBackup);
 
